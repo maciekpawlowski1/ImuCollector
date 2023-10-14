@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.fold
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.take
 import kotlin.time.Duration
@@ -71,6 +72,9 @@ class SensorAggregator {
             }
             .onEach(::println)
             .take(count)
+            .onStart {
+                emit("gyro_x;gyro_y;gyro_z;magnetometer_x;magnetometer_y;magnetometer_z;accelerometer_x;accelerometer_y;accelerometer_z;\n")
+            }
             .fold(initial = "") { acc, value ->
                 acc + value
             }
