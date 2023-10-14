@@ -15,13 +15,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
+import com.pawlowski.imucollector.data.ActivityType
+import com.pawlowski.imucollector.data.IMUServerDataProvider
 import com.pawlowski.imucollector.ui.AccelerometerSensorListener
 import com.pawlowski.imucollector.ui.SensorAggregator
 import com.pawlowski.imucollector.ui.GyroSensorListener
 import com.pawlowski.imucollector.ui.theme.ImuCollectorTheme
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val sensorManager by lazy {
@@ -39,6 +44,9 @@ class MainActivity : ComponentActivity() {
 
     private val gyroListener = GyroSensorListener(aggregator)
     private val accelerometerListener = AccelerometerSensorListener(aggregator)
+
+    @Inject
+    lateinit var dataProvider: IMUServerDataProvider
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,7 +67,11 @@ class MainActivity : ComponentActivity() {
         sensorManager.registerListener(accelerometerListener, accelerometerSensor, SENSOR_DELAY_UI)
 
         lifecycleScope.launch {
-            aggregator.collect(1.seconds)
+            val result = aggregator.collect(1.seconds)
+            dataProvider.sendImuData(
+                sensorData = result,
+                activityType = ActivityType.CIRCLES,
+            )
         }
     }
 

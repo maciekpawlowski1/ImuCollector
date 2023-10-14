@@ -5,7 +5,11 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.fold
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.sample
+import kotlinx.coroutines.flow.take
 import kotlin.time.Duration
 
 class SensorAggregator {
@@ -24,7 +28,6 @@ class SensorAggregator {
                 x = x,
                 y = y,
                 z = z,
-                timestamp = timestamp,
             )
         )
     }
@@ -40,20 +43,20 @@ class SensorAggregator {
                 x = x,
                 y = y,
                 z = z,
-                timestamp = timestamp,
             )
         )
     }
 
-    suspend fun collect(interval: Duration) {
+    suspend fun collect(interval: Duration): String =
         combine(gyroFlow, accelerometerFlow) { gyroSample, accelerometerSample ->
             Pair(gyroSample, accelerometerSample)
-        }.throttle(interval.inWholeMilliseconds)
+        }.sample(period = interval)
             .map {
                 "Gyro: ${it.first} Accelerometer: ${it.second}"
             }
-            .collect {
-                Log.d("collecting", "$it")
+            .onEach(::println)
+            .take(20)
+            .fold(initial = "") { acc, value ->
+                acc + value
             }
-    }
 }
