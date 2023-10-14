@@ -14,7 +14,7 @@ class IMUServerDataProvider @Inject constructor(
     ) {
         Log.d("sending", sensorData)
         val response = api.sendIMU(
-            body = RequestBody.create(MediaType.parse("application/json"), sensorData),
+            body = RequestBody.create(MediaType.parse("text/csv"), sensorData),
             activityType = activityType.code,
         )
         Log.d("sending", "no exception")

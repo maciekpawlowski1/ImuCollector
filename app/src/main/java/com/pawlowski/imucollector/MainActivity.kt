@@ -3,7 +3,7 @@ package com.pawlowski.imucollector
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
-import android.hardware.SensorManager.SENSOR_DELAY_UI
+import android.hardware.SensorManager.SENSOR_DELAY_FASTEST
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,11 +20,12 @@ import com.pawlowski.imucollector.data.IMUServerDataProvider
 import com.pawlowski.imucollector.ui.AccelerometerSensorListener
 import com.pawlowski.imucollector.ui.SensorAggregator
 import com.pawlowski.imucollector.ui.GyroSensorListener
+import com.pawlowski.imucollector.ui.MagnetometerSensorListener
 import com.pawlowski.imucollector.ui.theme.ImuCollectorTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import javax.inject.Inject
-import kotlin.time.Duration.Companion.seconds
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -40,10 +41,15 @@ class MainActivity : ComponentActivity() {
         sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
     }
 
+    private val magnetometerSensor: Sensor? by lazy {
+        sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+    }
+
     private val aggregator = SensorAggregator()
 
     private val gyroListener = GyroSensorListener(aggregator)
     private val accelerometerListener = AccelerometerSensorListener(aggregator)
+    private val magnetometerListener = MagnetometerSensorListener(aggregator)
 
     @Inject
     lateinit var dataProvider: IMUServerDataProvider
@@ -63,11 +69,13 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        sensorManager.registerListener(gyroListener, gyroscopeSensor, SENSOR_DELAY_UI)
-        sensorManager.registerListener(accelerometerListener, accelerometerSensor, SENSOR_DELAY_UI)
+        sensorManager.registerListener(gyroListener, gyroscopeSensor, SENSOR_DELAY_FASTEST)
+        sensorManager.registerListener(accelerometerListener, accelerometerSensor, SENSOR_DELAY_FASTEST)
+        sensorManager.registerListener(magnetometerListener, magnetometerSensor, SENSOR_DELAY_FASTEST)
 
-        lifecycleScope.launch {
-            val result = aggregator.collect(1.seconds)
+
+        lifecycleScope.launch(Dispatchers.IO) {
+            val result = aggregator.collect()
             dataProvider.sendImuData(
                 sensorData = result,
                 activityType = ActivityType.CIRCLES,
