@@ -49,7 +49,12 @@ class SensorAggregator {
         )
     }
 
-    fun onNewMagnetometer(x: Float, y: Float, z: Float, timestamp: Long) {
+    fun onNewMagnetometer(
+        x: Float,
+        y: Float,
+        z: Float,
+        timestamp: Long,
+    ) {
         magnetometerFlow.tryEmit(
             SensorData(
                 x = x,

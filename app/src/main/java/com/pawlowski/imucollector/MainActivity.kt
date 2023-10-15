@@ -89,7 +89,7 @@ class MainActivity : ComponentActivity() {
                     Spacer(modifier = Modifier.height(20.dp))
 
                     val selectedType = remember {
-                        mutableStateOf(ActivityType.CIRCLES)
+                        mutableStateOf(ActivityType.CIRCLES_LEFT)
                     }
                     val isInProgress = remember {
                         mutableStateOf(false)
@@ -155,6 +155,7 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         sensorManager.unregisterListener(gyroListener, gyroscopeSensor)
         sensorManager.unregisterListener(accelerometerListener, accelerometerSensor)
+        sensorManager.unregisterListener(magnetometerListener, magnetometerSensor)
 
         super.onDestroy()
     }
