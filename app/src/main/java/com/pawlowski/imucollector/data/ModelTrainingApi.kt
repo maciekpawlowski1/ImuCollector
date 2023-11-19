@@ -6,7 +6,7 @@ import retrofit2.http.Body
 import retrofit2.http.POST
 import retrofit2.http.Path
 
-interface API {
+interface ModelTrainingApi {
 
     @POST("/submit/{klasa}")
     suspend fun sendIMU(@Body body: RequestBody, @Path("klasa") activityType: String): Response<Unit>

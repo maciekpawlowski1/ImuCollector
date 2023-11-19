@@ -46,7 +46,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
-
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -73,7 +72,6 @@ class MainActivity : ComponentActivity() {
 
     @Inject
     lateinit var dataProvider: IMUServerDataProvider
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -106,7 +104,7 @@ class MainActivity : ComponentActivity() {
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    if(isInProgress.value && !isSending.value) {
+                    if (isInProgress.value && !isSending.value) {
                         CircularProgressIndicator()
                     }
                     val scope = rememberCoroutineScope()
@@ -139,7 +137,7 @@ class MainActivity : ComponentActivity() {
                         enabled = !isInProgress.value,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .wrapContentHeight()
+                            .wrapContentHeight(),
                     ) {
                         Text(text = "Start")
                     }
@@ -175,11 +173,10 @@ fun ActivityTypeRow(
                 type = it,
                 onClick = {
                     onActivityTypeChange(it)
-                }
+                },
             )
         }
     }
-
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
