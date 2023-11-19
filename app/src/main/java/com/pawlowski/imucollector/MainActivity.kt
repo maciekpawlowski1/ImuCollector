@@ -1,13 +1,10 @@
 package com.pawlowski.imucollector
 
 import android.content.Context
-import android.content.Context.VIBRATOR_SERVICE
 import android.hardware.Sensor
 import android.hardware.SensorManager
 import android.hardware.SensorManager.SENSOR_DELAY_FASTEST
 import android.os.Bundle
-import android.os.VibrationEffect
-import android.os.Vibrator
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -26,25 +23,24 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.pawlowski.imucollector.data.ActivityType
 import com.pawlowski.imucollector.data.IMUServerDataProvider
 import com.pawlowski.imucollector.ui.AccelerometerSensorListener
 import com.pawlowski.imucollector.ui.GyroSensorListener
 import com.pawlowski.imucollector.ui.MagnetometerSensorListener
+import com.pawlowski.imucollector.ui.MainViewModel
 import com.pawlowski.imucollector.ui.SensorAggregator
 import com.pawlowski.imucollector.ui.theme.ImuCollectorTheme
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import javax.inject.Singleton
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -64,7 +60,8 @@ class MainActivity : ComponentActivity() {
         sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
     }
 
-    private val aggregator = SensorAggregator()
+    @Singleton
+    lateinit var aggregator: SensorAggregator
 
     private val gyroListener = GyroSensorListener(aggregator)
     private val accelerometerListener = AccelerometerSensorListener(aggregator)
@@ -73,11 +70,13 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var dataProvider: IMUServerDataProvider
 
+    @Inject
+    lateinit var mainViewModel: MainViewModel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             ImuCollectorTheme {
-                // A surface container using the 'background' color from the theme
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -89,12 +88,7 @@ class MainActivity : ComponentActivity() {
                     val selectedType = remember {
                         mutableStateOf(ActivityType.CIRCLES_LEFT)
                     }
-                    val isInProgress = remember {
-                        mutableStateOf(false)
-                    }
-                    val isSending = remember {
-                        mutableStateOf(false)
-                    }
+                    val state by mainViewModel.state.collectAsState()
                     ActivityTypeRow(
                         selectedType = selectedType.value,
                         onActivityTypeChange = {
@@ -104,37 +98,15 @@ class MainActivity : ComponentActivity() {
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    if (isInProgress.value && !isSending.value) {
+                    if (state.isInProgress && !state.isSending) {
                         CircularProgressIndicator()
                     }
-                    val scope = rememberCoroutineScope()
-                    val context = LocalContext.current
 
                     Button(
                         onClick = {
-                            isInProgress.value = true
-                            vibrate(context)
-
-                            scope.launch(Dispatchers.IO) {
-                                val result = aggregator.collect()
-
-                                withContext(Dispatchers.Main) {
-                                    vibrate(context)
-                                    isSending.value = true
-                                }
-
-                                dataProvider.sendImuData(
-                                    sensorData = result,
-                                    activityType = selectedType.value,
-                                )
-
-                                withContext(Dispatchers.Main) {
-                                    isInProgress.value = false
-                                    isSending.value = false
-                                }
-                            }
+                            mainViewModel.startActivity(selectedType = selectedType.value)
                         },
-                        enabled = !isInProgress.value,
+                        enabled = !state.isInProgress,
                         modifier = Modifier
                             .fillMaxWidth()
                             .wrapContentHeight(),
@@ -145,17 +117,24 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        registerListeners()
+    }
+
+    private fun registerListeners() {
         sensorManager.registerListener(gyroListener, gyroscopeSensor, SENSOR_DELAY_FASTEST)
         sensorManager.registerListener(accelerometerListener, accelerometerSensor, SENSOR_DELAY_FASTEST)
         sensorManager.registerListener(magnetometerListener, magnetometerSensor, SENSOR_DELAY_FASTEST)
     }
 
-    override fun onDestroy() {
+    private fun unRegisterListeners() {
         sensorManager.unregisterListener(gyroListener, gyroscopeSensor)
         sensorManager.unregisterListener(accelerometerListener, accelerometerSensor)
         sensorManager.unregisterListener(magnetometerListener, magnetometerSensor)
+    }
 
+    override fun onDestroy() {
         super.onDestroy()
+        unRegisterListeners()
     }
 }
 
@@ -191,8 +170,4 @@ fun ActivityTypeChip(
         onClick = onClick,
         label = { Text(text = type.code) },
     )
-}
-
-private fun vibrate(context: Context) {
-    (context.getSystemService(VIBRATOR_SERVICE) as Vibrator).vibrate(VibrationEffect.createOneShot(150, VibrationEffect.DEFAULT_AMPLITUDE))
 }

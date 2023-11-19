@@ -10,14 +10,16 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.flow.take
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 
-class SensorAggregator {
+@Singleton
+class SensorAggregator @Inject constructor() {
     private val gyroFlow = MutableSharedFlow<SensorData>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_LATEST)
     private val accelerometerFlow = MutableSharedFlow<SensorData>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_LATEST)
     private val magnetometerFlow = MutableSharedFlow<SensorData>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_LATEST)
-
 
     fun onNewGyro(
         x: Float,
@@ -30,7 +32,7 @@ class SensorAggregator {
                 x = x,
                 y = y,
                 z = z,
-            )
+            ),
         )
     }
 
@@ -45,7 +47,7 @@ class SensorAggregator {
                 x = x,
                 y = y,
                 z = z,
-            )
+            ),
         )
     }
 
@@ -60,7 +62,7 @@ class SensorAggregator {
                 x = x,
                 y = y,
                 z = z,
-            )
+            ),
         )
     }
 
