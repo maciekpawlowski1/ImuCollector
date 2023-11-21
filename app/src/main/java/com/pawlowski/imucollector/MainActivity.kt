@@ -7,6 +7,7 @@ import android.hardware.SensorManager.SENSOR_DELAY_FASTEST
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -32,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.pawlowski.imucollector.data.ActivityType
 import com.pawlowski.imucollector.data.IMUServerDataProvider
+import com.pawlowski.imucollector.domain.model.RunMode
 import com.pawlowski.imucollector.ui.AccelerometerSensorListener
 import com.pawlowski.imucollector.ui.GyroSensorListener
 import com.pawlowski.imucollector.ui.MagnetometerSensorListener
@@ -40,7 +42,6 @@ import com.pawlowski.imucollector.ui.SensorAggregator
 import com.pawlowski.imucollector.ui.theme.ImuCollectorTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
-import javax.inject.Singleton
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -60,18 +61,23 @@ class MainActivity : ComponentActivity() {
         sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
     }
 
-    @Singleton
+    @Inject
     lateinit var aggregator: SensorAggregator
 
-    private val gyroListener = GyroSensorListener(aggregator)
-    private val accelerometerListener = AccelerometerSensorListener(aggregator)
-    private val magnetometerListener = MagnetometerSensorListener(aggregator)
+    private val gyroListener by lazy {
+        GyroSensorListener(aggregator)
+    }
+    private val accelerometerListener by lazy {
+        AccelerometerSensorListener(aggregator)
+    }
+    private val magnetometerListener by lazy {
+        MagnetometerSensorListener(aggregator)
+    }
 
     @Inject
     lateinit var dataProvider: IMUServerDataProvider
 
-    @Inject
-    lateinit var mainViewModel: MainViewModel
+    private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -89,6 +95,16 @@ class MainActivity : ComponentActivity() {
                         mutableStateOf(ActivityType.CIRCLES_LEFT)
                     }
                     val state by mainViewModel.state.collectAsState()
+
+                    RunModeRow(
+                        selectedRunMode = state.runMode,
+                        onRunModeChange = {
+                            mainViewModel.changeRunMode(it)
+                        },
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
                     ActivityTypeRow(
                         selectedType = selectedType.value,
                         onActivityTypeChange = {
@@ -113,6 +129,17 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Text(text = "Start")
                     }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    if (state.runMode == RunMode.TESTING) {
+                        state.lastPrediction?.let { lastPrediction ->
+                            lastPrediction.maxBy { it.value }
+                                .let {
+                                    Text(text = "${it.key.code}: ${it.value}")
+                                }
+                        }
+                    }
                 }
             }
         }
@@ -135,6 +162,26 @@ class MainActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         unRegisterListeners()
+    }
+}
+
+@Composable
+fun RunModeRow(
+    selectedRunMode: RunMode,
+    onRunModeChange: (RunMode) -> Unit,
+) {
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        items(RunMode.values().toList()) {
+            RunModeChip(
+                isSelected = selectedRunMode == it,
+                type = it,
+                onClick = {
+                    onRunModeChange(it)
+                },
+            )
+        }
     }
 }
 
@@ -169,5 +216,19 @@ fun ActivityTypeChip(
         selected = isSelected,
         onClick = onClick,
         label = { Text(text = type.code) },
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RunModeChip(
+    isSelected: Boolean,
+    type: RunMode,
+    onClick: () -> Unit,
+) {
+    FilterChip(
+        selected = isSelected,
+        onClick = onClick,
+        label = { Text(text = type.name) },
     )
 }

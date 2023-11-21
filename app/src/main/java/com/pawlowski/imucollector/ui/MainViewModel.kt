@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pawlowski.imucollector.data.ActivityType
 import com.pawlowski.imucollector.data.IMUServerDataProvider
+import com.pawlowski.imucollector.domain.model.RunMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -46,10 +47,21 @@ class MainViewModel @Inject constructor(
                     }
                 }
 
-                dataProvider.sendImuData(
-                    sensorData = result,
-                    activityType = selectedType,
-                )
+                when (state.value.runMode) {
+                    RunMode.TRAINING -> {
+                        dataProvider.sendImuData(
+                            sensorData = result,
+                            activityType = selectedType,
+                        )
+                    }
+                    RunMode.TESTING -> {
+                        val predictions = dataProvider.getPredictions(sensorData = result)
+
+                        _state.update {
+                            it.copy(lastPrediction = predictions)
+                        }
+                    }
+                }
 
                 withContext(Dispatchers.Main) {
                     _state.update {
@@ -60,6 +72,12 @@ class MainViewModel @Inject constructor(
                     }
                 }
             }
+        }
+    }
+
+    fun changeRunMode(runMode: RunMode) {
+        _state.update {
+            it.copy(runMode = runMode)
         }
     }
 
