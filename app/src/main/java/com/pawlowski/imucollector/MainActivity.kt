@@ -105,14 +105,16 @@ class MainActivity : ComponentActivity() {
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    ActivityTypeRow(
-                        selectedType = selectedType.value,
-                        onActivityTypeChange = {
-                            selectedType.value = it
-                        },
-                    )
+                    if (state.runMode == RunMode.TRAINING) {
+                        ActivityTypeRow(
+                            selectedType = selectedType.value,
+                            onActivityTypeChange = {
+                                selectedType.value = it
+                            },
+                        )
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
+                    }
 
                     if (state.isInProgress && !state.isSending) {
                         CircularProgressIndicator()
@@ -139,6 +141,12 @@ class MainActivity : ComponentActivity() {
                                     Text(text = "${it.key.code}: ${it.value}")
                                 }
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    if (state.error != null) {
+                        Text(text = "Error: ${state.error}")
                     }
                 }
             }

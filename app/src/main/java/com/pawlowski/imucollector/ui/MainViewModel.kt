@@ -11,6 +11,7 @@ import com.pawlowski.imucollector.data.IMUServerDataProvider
 import com.pawlowski.imucollector.domain.model.RunMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -33,33 +34,50 @@ class MainViewModel @Inject constructor(
     fun startActivity(selectedType: ActivityType) {
         if (!state.value.isInProgress) {
             _state.update {
-                it.copy(isInProgress = true)
+                it.copy(
+                    isInProgress = true,
+                    lastPrediction = null,
+                )
             }
             vibrate(context = context)
 
             viewModelScope.launch(Dispatchers.IO) {
-                val result = aggregator.collect()
+                runCatching {
+                    val result = aggregator.collect()
 
-                withContext(Dispatchers.Main) {
-                    vibrate(context)
-                    _state.update {
-                        it.copy(isSending = true)
+                    withContext(Dispatchers.Main) {
+                        vibrate(context)
+                        _state.update {
+                            it.copy(isSending = true)
+                        }
                     }
-                }
 
-                when (state.value.runMode) {
-                    RunMode.TRAINING -> {
-                        dataProvider.sendImuData(
-                            sensorData = result,
-                            activityType = selectedType,
+                    when (state.value.runMode) {
+                        RunMode.TRAINING -> {
+                            dataProvider.sendImuData(
+                                sensorData = result,
+                                activityType = selectedType,
+                            )
+                        }
+                        RunMode.TESTING -> {
+                            val predictions = dataProvider.getPredictions(sensorData = result)
+
+                            _state.update {
+                                it.copy(lastPrediction = predictions)
+                            }
+                        }
+                    }
+                }.onFailure { throwable ->
+                    ensureActive()
+                    _state.update {
+                        it.copy(
+                            lastPrediction = null,
+                            error = throwable.message ?: "Unknown error",
                         )
                     }
-                    RunMode.TESTING -> {
-                        val predictions = dataProvider.getPredictions(sensorData = result)
-
-                        _state.update {
-                            it.copy(lastPrediction = predictions)
-                        }
+                }.onSuccess {
+                    _state.update {
+                        it.copy(error = null)
                     }
                 }
 

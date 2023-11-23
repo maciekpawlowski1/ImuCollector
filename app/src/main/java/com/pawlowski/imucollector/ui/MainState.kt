@@ -8,4 +8,5 @@ data class MainState(
     val isSending: Boolean = false,
     val lastPrediction: Map<ActivityType, Float>? = null,
     val runMode: RunMode = RunMode.TRAINING,
+    val error: String? = null,
 )
