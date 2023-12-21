@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.sample
-import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.takeWhile
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Duration
@@ -69,7 +69,7 @@ class SensorAggregator @Inject constructor() {
     @OptIn(FlowPreview::class)
     suspend fun collect(
         interval: Duration = 50.milliseconds,
-        count: Int = 50,
+        shouldContinue: () -> Boolean,
     ): String =
         combine(gyroFlow, magnetometerFlow, accelerometerFlow) { gyroSample, magnetometerSample, accelerometerSample ->
             Triple(gyroSample, magnetometerSample, accelerometerSample)
@@ -78,7 +78,9 @@ class SensorAggregator @Inject constructor() {
                 it.toCsvRow()
             }
             .onEach(::println)
-            .take(count)
+            .takeWhile {
+                shouldContinue()
+            }
             .onStart {
                 emit("gyro_x;gyro_y;gyro_z;magnetometer_x;magnetometer_y;magnetometer_z;accelerometer_x;accelerometer_y;accelerometer_z;\n")
             }

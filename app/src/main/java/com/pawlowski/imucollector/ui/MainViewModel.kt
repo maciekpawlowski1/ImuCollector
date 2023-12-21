@@ -11,6 +11,8 @@ import com.pawlowski.imucollector.data.IMUServerDataProvider
 import com.pawlowski.imucollector.domain.model.RunMode
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
+import kotlin.time.Duration.Companion.seconds
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
@@ -32,18 +35,29 @@ class MainViewModel @Inject constructor(
     private val _state = MutableStateFlow(MainState())
 
     fun startActivity(selectedType: ActivityType) {
-        if (!state.value.isInProgress) {
+        if (!state.value.isTrackingInProgress) {
             _state.update {
                 it.copy(
-                    isInProgress = true,
+                    isTrackingInProgress = true,
                     lastPrediction = null,
+                    lastStartTime = System.currentTimeMillis(),
+                    error = null,
                 )
             }
             vibrate(context = context)
 
             viewModelScope.launch(Dispatchers.IO) {
                 runCatching {
-                    val result = aggregator.collect()
+                    val autoStopJob = launch {
+                        delay(5.seconds)
+                        stopActivity()
+                    }
+                    val result = aggregator.collect(
+                        shouldContinue = {
+                            state.value.isTrackingInProgress
+                        },
+                    )
+                    autoStopJob.cancelAndJoin()
 
                     withContext(Dispatchers.Main) {
                         vibrate(context)
@@ -52,20 +66,24 @@ class MainViewModel @Inject constructor(
                         }
                     }
 
-                    when (state.value.runMode) {
-                        RunMode.TRAINING -> {
-                            dataProvider.sendImuData(
-                                sensorData = result,
-                                activityType = selectedType,
-                            )
-                        }
-                        RunMode.TESTING -> {
-                            val predictions = dataProvider.getPredictions(sensorData = result)
+                    if (System.currentTimeMillis() - (state.value.lastStartTime ?: 0) >= 1500) {
+                        when (state.value.runMode) {
+                            RunMode.TRAINING -> {
+                                dataProvider.sendImuData(
+                                    sensorData = result,
+                                    activityType = selectedType,
+                                )
+                            }
+                            RunMode.TESTING -> {
+                                val predictions = dataProvider.getPredictions(sensorData = result)
 
-                            _state.update {
-                                it.copy(lastPrediction = predictions)
+                                _state.update {
+                                    it.copy(lastPrediction = predictions)
+                                }
                             }
                         }
+                    } else {
+                        throw Exception("Tracking time should be min 1.5 sec")
                     }
                 }.onFailure { throwable ->
                     ensureActive()
@@ -84,12 +102,20 @@ class MainViewModel @Inject constructor(
                 withContext(Dispatchers.Main) {
                     _state.update {
                         it.copy(
-                            isInProgress = false,
+                            isTrackingInProgress = false,
                             isSending = false,
                         )
                     }
                 }
             }
+        }
+    }
+
+    fun stopActivity() {
+        _state.update {
+            it.copy(
+                isTrackingInProgress = false,
+            )
         }
     }
 

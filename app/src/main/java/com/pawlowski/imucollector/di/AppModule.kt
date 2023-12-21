@@ -34,7 +34,7 @@ class AppModule {
     @Named("interference")
     @Provides
     fun interferenceRetrofit(): Retrofit = Retrofit.Builder()
-        .baseUrl("http://srv3.enteam.pl:3199/")
+        .baseUrl("https://imutensor.mateuszwozniak.dev/")
         .addConverterFactory(GsonConverterFactory.create())
         .client(
             OkHttpClient.Builder().addInterceptor(

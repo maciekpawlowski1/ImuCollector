@@ -7,6 +7,6 @@ import retrofit2.http.POST
 
 interface InterferenceApi {
 
-    @POST("interference")
+    @POST("inference")
     suspend fun getPredictions(@Body body: RequestBody): Response<List<List<Float>>>
 }

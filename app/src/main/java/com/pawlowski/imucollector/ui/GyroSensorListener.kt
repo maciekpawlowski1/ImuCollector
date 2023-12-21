@@ -6,7 +6,7 @@ import android.hardware.SensorEventListener
 
 class GyroSensorListener(
     private val aggregator: SensorAggregator,
-): SensorEventListener {
+) : SensorEventListener {
 
     override fun onSensorChanged(event: SensorEvent?) {
         if (event != null) {
@@ -19,7 +19,7 @@ class GyroSensorListener(
                 x = axisX,
                 y = axisY,
                 z = axisZ,
-                timestamp = event.timestamp
+                timestamp = event.timestamp,
             )
         }
     }

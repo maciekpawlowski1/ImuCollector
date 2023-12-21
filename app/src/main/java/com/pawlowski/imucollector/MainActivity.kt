@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
@@ -30,9 +31,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.pawlowski.imucollector.data.ActivityType
-import com.pawlowski.imucollector.data.IMUServerDataProvider
 import com.pawlowski.imucollector.domain.model.RunMode
 import com.pawlowski.imucollector.ui.AccelerometerSensorListener
 import com.pawlowski.imucollector.ui.GyroSensorListener
@@ -74,9 +75,6 @@ class MainActivity : ComponentActivity() {
         MagnetometerSensorListener(aggregator)
     }
 
-    @Inject
-    lateinit var dataProvider: IMUServerDataProvider
-
     private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -116,20 +114,34 @@ class MainActivity : ComponentActivity() {
                         Spacer(modifier = Modifier.height(20.dp))
                     }
 
-                    if (state.isInProgress && !state.isSending) {
+                    if (state.isTrackingInProgress && !state.isSending) {
                         CircularProgressIndicator()
                     }
 
-                    Button(
-                        onClick = {
-                            mainViewModel.startActivity(selectedType = selectedType.value)
-                        },
-                        enabled = !state.isInProgress,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(),
-                    ) {
-                        Text(text = "Start")
+                    if (state.isTrackingInProgress && !state.isSending) {
+                        Button(
+                            onClick = {
+                                mainViewModel.stopActivity()
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight(),
+                        ) {
+                            Text(text = "Stop")
+                        }
+                    } else {
+                        Button(
+                            onClick = {
+                                mainViewModel.startActivity(selectedType = selectedType.value)
+                            },
+                            enabled = !state.isTrackingInProgress && !state.isSending,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .wrapContentHeight(),
+                        ) {
+                            Text(text = "Start")
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
