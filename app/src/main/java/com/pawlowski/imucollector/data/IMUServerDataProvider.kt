@@ -5,6 +5,8 @@ import com.pawlowski.imucollector.domain.model.ModelInfo
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
+import kotlin.math.exp
+import kotlin.math.roundToInt
 
 class IMUServerDataProvider @Inject constructor(
     private val modelTrainingApi: ModelTrainingApi,
@@ -36,5 +38,12 @@ class IMUServerDataProvider @Inject constructor(
 
     suspend fun getLatestModelInfo(): ModelInfo {
         return modelInfoApi.getLastModel()
+    }
+
+    fun softmax(scores: Map<ActivityType, Float>): Map<ActivityType, Int> {
+        val expScores = scores.mapValues { (_, score) -> exp(score.toDouble()) }
+        val expSum = expScores.values.sum()
+
+        return expScores.mapValues { (_, expScore) -> ((expScore / expSum).toFloat() * 100).roundToInt() }
     }
 }

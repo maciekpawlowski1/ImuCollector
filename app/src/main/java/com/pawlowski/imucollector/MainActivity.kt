@@ -151,7 +151,7 @@ class MainActivity : ComponentActivity() {
                         state.lastPrediction?.let { lastPrediction ->
                             lastPrediction.maxBy { it.value }
                                 .let {
-                                    Text(text = "${it.key.code}: ${it.value}")
+                                    Text(text = "${it.key.code}: ${it.value}%")
                                 }
                         }
                     }
