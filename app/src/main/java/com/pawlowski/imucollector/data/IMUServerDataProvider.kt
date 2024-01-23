@@ -28,22 +28,15 @@ class IMUServerDataProvider @Inject constructor(
 
     suspend fun getPredictions(
         sensorData: String,
-    ): Map<ActivityType, Float> = interferenceApi.getPredictions(
+    ): Map<ActivityType, Int> = interferenceApi.getPredictions(
         body = sensorData.toRequestBody(contentType = "text/csv".toMediaTypeOrNull()),
     ).body()!!.first().let { tensor ->
         ActivityType.values().associateWith {
             tensor[it.tensorIndex]
         }
-    }
+    }.softmax()
 
     suspend fun getLatestModelInfo(): ModelInfo {
         return modelInfoApi.getLastModel()
-    }
-
-    fun softmax(scores: Map<ActivityType, Float>): Map<ActivityType, Int> {
-        val expScores = scores.mapValues { (_, score) -> exp(score.toDouble()) }
-        val expSum = expScores.values.sum()
-
-        return expScores.mapValues { (_, expScore) -> ((expScore / expSum).toFloat() * 100).roundToInt() }
     }
 }

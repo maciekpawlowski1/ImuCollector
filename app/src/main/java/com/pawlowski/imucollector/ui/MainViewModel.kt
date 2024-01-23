@@ -76,10 +76,9 @@ class MainViewModel @Inject constructor(
                             }
                             RunMode.TESTING -> {
                                 val predictions = dataProvider.getPredictions(sensorData = result)
-                                val normalizedPredictions=  dataProvider.softmax(predictions)
 
                                 _state.update {
-                                    it.copy(lastPrediction = normalizedPredictions)
+                                    it.copy(lastPrediction = predictions)
                                 }
                             }
                         }
